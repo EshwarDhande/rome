@@ -160,3 +160,7 @@ python3 -m experiments/summarize --alg_name=ROME --run_name=run_001
   year={2022}
 }
 ```
+## Run causal_trace
+```bash
+python3 -m experiments.causal_trace
+```
