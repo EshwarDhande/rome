@@ -70,7 +70,7 @@ def compute_u(
     print("Computing left vector (u)...")
 
     # Compute projection token
-    word_repr_args = dict(
+    word_repr_args = dict(      #word_repr_args: A dictionary containing the arguments for the get_reprs_at_word_tokens function.containing arguments that will be used when computing word representations.
         model=model,
         tok=tok,
         layer=layer,
@@ -102,7 +102,7 @@ def compute_u(
         ).mean(0)
         print("Selected u projection token with last token")
     else:
-        raise ValueError(f"fact_token={hparams.fact_token} not recognized")
+        raise ValueError(f"fact_token={hparams.fact_token} not recognized")     
 
     # Apply inverse second moment adjustment
     u = cur_repr

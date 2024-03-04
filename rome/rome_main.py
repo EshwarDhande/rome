@@ -17,7 +17,7 @@ CONTEXT_TEMPLATES_CACHE = None
 def apply_rome_to_model(
     model: AutoModelForCausalLM,
     tok: AutoTokenizer,
-    requests: List[Dict],
+    requests: List[Dict], # List of requests to apply to the model
     hparams: ROMEHyperParams,
     copy=False,
     return_orig_weights=False,
@@ -32,24 +32,24 @@ def apply_rome_to_model(
     """
 
     if copy:
-        model = deepcopy(model)
+        model = deepcopy(model)#creates a deep copy of the model. This is done to ensure that the original model is not modified during the editing process. The deep copy is stored in the model variable.
 
-    weights_copy = {}
+    weights_copy = {} #creates an empty dictionary to store the original weights that changed. This dictionary will be used to store the original weights of the model that were changed during the editing process.
 
-    for i, request in enumerate(requests):
-        deltas = execute_rome(model, tok, request, hparams)
+    for i, request in enumerate(requests): #iterates through the list of requests to apply to the model. The index and the request are stored in the variables i and request respectively.
+        deltas = execute_rome(model, tok, request, hparams) ## Execute the ROME method on the model with the given request and hyperparameters
 
         with torch.no_grad():
-            for w_name, (delta_u, delta_v) in deltas.items():
-                upd_matrix = delta_u.unsqueeze(1) @ delta_v.unsqueeze(0)
-                w = nethook.get_parameter(model, w_name)
-                upd_matrix = upd_matrix_match_shape(upd_matrix, w.shape)
+            for w_name, (delta_u, delta_v) in deltas.items():    #iterates through the dictionary of deltas. The weight name and the delta values are stored in the variables w_name and (delta_u, delta_v) respectively.
+                upd_matrix = delta_u.unsqueeze(1) @ delta_v.unsqueeze(0)     #computes the update matrix by taking the outer product of delta_u and delta_v. outer product results in a matrix where each element is the product of the corresponding elements from the two input tensors
+                w = nethook.get_parameter(model, w_name)    #retrieves the weight tensor from the model using the weight name. The weight tensor is stored in the variable w.
+                upd_matrix = upd_matrix_match_shape(upd_matrix, w.shape)    #ensures that the update matrix has the same shape as the weight tensor. If the update matrix does not have the same shape as the weight tensor, a ValueError is raised.
 
-                if return_orig_weights and w_name not in weights_copy:
+                if return_orig_weights and w_name not in weights_copy:  #checks if the return_orig_weights flag is set to True and if the weight name is not in the weights_copy dictionary.
                     assert i == 0
-                    weights_copy[w_name] = w.detach().clone()
+                    weights_copy[w_name] = w.detach().clone()   #stores a deep copy of the weight tensor in the weights_copy dictionary. The weight tensor is stored using the weight name as the key.
 
-                w[...] += upd_matrix
+                w[...] += upd_matrix    #updates the weight tensor by adding the update matrix to it. The update matrix is added to the weight tensor in place.
 
         print(f"New weights successfully inserted into {list(deltas.keys())}")
 
@@ -61,7 +61,7 @@ def execute_rome(
     tok: AutoTokenizer,
     request: Dict,
     hparams: ROMEHyperParams,
-) -> Dict[str, Tuple[torch.Tensor]]:
+) -> Dict[str, Tuple[torch.Tensor]]: #It returns a dictionary (deltas) containing tensors representing left and right vectors for each updated weight parameter.
     """
     Executes the ROME update algorithm for the specified update at the specified layer
     Invariant: model at beginning of function == model at end of function
@@ -85,7 +85,11 @@ def execute_rome(
         for layer in hparams.layers
     }
     # Save old weights for future restoration
-    weights_copy = {k: v.detach().clone() for k, v in weights.items()}
+    weights_copy = {k: v.detach().clone() for k, v in weights.items()} #v.detach().clone():
+
+    #For each weight tensor v in the original weights dictionary, the operations detach() and clone() are applied.
+    #detach(): This method creates a new tensor that shares the same data as the original tensor but is detached from the computation graph. It prevents any further gradient computation on v.
+    #clone(): This method creates a copy of the detached tensor. The new tensor is a separate copy with its own memory.
 
     # Update loop: sequentially intervene at each specified layer
     deltas = {}
@@ -157,7 +161,7 @@ def get_context_templates(model, tok, length_params):
     if CONTEXT_TEMPLATES_CACHE is None:
         CONTEXT_TEMPLATES_CACHE = ["{}"] + [
             x + ". {}"
-            for x in sum(
+            for x in sum(   #The sum function is used to concatenate all the generated text snippets into a single list.
                 (
                     generate_fast(
                         model,

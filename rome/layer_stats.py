@@ -92,7 +92,7 @@ def layer_stats(
     Function to load or compute cached stats.
     """
 
-    def get_ds():
+    def get_ds():   #loading a dataset, adjusting the maximum sequence length, and creating a tokenized dataset using the specified tokenizer.
         raw_ds = load_dataset(
             ds_name,
             dict(wikitext="wikitext-103-raw-v1", wikipedia="20200501.en")[ds_name],
@@ -110,22 +110,22 @@ def layer_stats(
     if precision is None:
         precision = "float64"
     dtype = getattr(torch, precision)
-    size_suffix = "" if sample_size is None else f"_{sample_size}"
+    size_suffix = "" if sample_size is None else f"_{sample_size}"  # Add sample size to filename
     if batch_tokens < npos:
-        size_suffix = "_t{batch_tokens}" + size_suffix
+        size_suffix = "_t{batch_tokens}" + size_suffix  
     if model_name is None:
         model_name = model.config._name_or_path.replace("/", "_")
 
-    stats_dir = Path(stats_dir)
+    stats_dir = Path(stats_dir) # Directory to store the statistics
     file_extension = f"{model_name}/{ds_name}_stats/{layer_name}_{precision}_{'-'.join(sorted(to_collect))}{size_suffix}.npz"
-    filename = stats_dir / file_extension
+    filename = stats_dir / file_extension       # File to store the statistics
 
     if not filename.exists() and download:
         remote_url = f"{REMOTE_ROOT_URL}/data/stats/{file_extension}"
         try:
             print(f"Attempting to download {file_extension} from {remote_url}.")
-            (stats_dir / "/".join(file_extension.split("/")[:-1])).mkdir(
-                exist_ok=True, parents=True
+            (stats_dir / "/".join(file_extension.split("/")[:-1])).mkdir(       
+                exist_ok=True, parents=True     # Create the directory if it does not exist
             )
             torch.hub.download_url_to_file(remote_url, filename)
             print("Successfully downloaded.")
@@ -135,7 +135,7 @@ def layer_stats(
     ds = get_ds() if not filename.exists() else None
 
     if progress is None:
-        progress = lambda x: x
+        progress = lambda x: x      #it assigns a lambda function to progress. This lambda function is a simple identity function that takes an argument x and returns x unchanged.
 
     stat = CombinedStat(**{k: STAT_TYPES[k]() for k in to_collect})
     loader = tally(
@@ -149,7 +149,7 @@ def layer_stats(
         random_sample=1,
         num_workers=2,
     )
-    batch_count = -(-(sample_size or len(ds)) // batch_size)
+    batch_count = -(-(sample_size or len(ds)) // batch_size)        #The number of batches to process.It uses sample_size if provided, otherwise, it uses the length of the dataset (len(ds)).
     with torch.no_grad():
         for batch_group in progress(loader, total=batch_count):
             for batch in batch_group:
@@ -158,7 +158,7 @@ def layer_stats(
                     model, layer_name, retain_input=True, retain_output=False, stop=True
                 ) as tr:
                     model(**batch)
-                feats = flatten_masked_batch(tr.input, batch["attention_mask"])
+                feats = flatten_masked_batch(tr.input, batch["attention_mask"])         #flattens the input tensor using the attention mask        
                 # feats = flatten_masked_batch(tr.output, batch["attention_mask"])
                 feats = feats.to(dtype=dtype)
                 stat.add(feats)

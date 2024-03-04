@@ -1376,7 +1376,7 @@ class CombinedStat(Stat):
         for prefix, obj in self._objs.items():
             obj.load_state_dict(pull_key_prefix(prefix, state))
 
-    def state_dict(self):
+    def state_dict(self):       
         result = {}
         for prefix, obj in self._objs.items():
             result.update(push_key_prefix(prefix, obj.state_dict()))

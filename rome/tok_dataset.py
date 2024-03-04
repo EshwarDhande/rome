@@ -7,29 +7,44 @@ class TokenizedDataset(Dataset):
     """
     Converts a dataset of text samples into a dataset of token sequences,
     as converted by a supplied tokenizer. The tokens come along with position
-    ids and attention masks, they can be supplied direcly to the model.
+    ids and attention masks, they can be supplied directly to the model.
     """
 
     def __init__(self, text_dataset, tokenizer=None, maxlen=None, field="text"):
+        # Initialization method for the TokenizedDataset class.
+        # It takes a text_dataset, tokenizer, maximum length (maxlen), and field as parameters.
         self.text_dataset = text_dataset
         self.field = field
         self.tokenizer = tokenizer
         self.maxlen = maxlen
+        # If the text_dataset has an "info" attribute, it is assigned to self.info.
         if hasattr(text_dataset, "info"):
             self.info = text_dataset.info
 
     def __len__(self):
+        # Returns the length of the text_dataset.
         return len(self.text_dataset)
 
     def __getitem__(self, i):
+        # Retrieves the i-th item from the text_dataset.
         text = self.text_dataset[i]
+        
+        # If a specific field is specified, extract the text from that field.
         if self.field is not None:
             text = text[self.field]
+
+        # Use the tokenizer to encode the text into token_list.
         token_list = self.tokenizer.encode(
             text, truncation=True, max_length=self.maxlen
         )
+
+        # Generate position_ids as a list of integers ranging from 0 to len(token_list).
         position_ids = list(range(len(token_list)))
+
+        # Create an attention_mask as a list of ones with the same length as token_list.
         attention_mask = [1] * len(token_list)
+
+        # Return a dictionary containing input_ids, position_ids, and attention_mask.
         return dict(
             input_ids=torch.tensor(token_list),
             position_ids=torch.tensor(position_ids),
@@ -55,7 +70,7 @@ def length_collation(token_size):
     """
 
     def collate_fn(items):
-        items = sorted(items, key=lambda x: -len(x["input_ids"]))
+        items = sorted(items, key=lambda x: -len(x["input_ids"]))       #Sorts the items in descending order of the length of the input_ids.
         batches = []
         batch = []
         batch_width = 0
@@ -83,9 +98,9 @@ def make_padded_batch(items):
     """
     max_len = max(len(d["input_ids"]) for d in items)
     if max_len == 0:
-        return {k: torch.zeros((0, 0), dtype=torch.long) for k in items[0]}
+        return {k: torch.zeros((0, 0), dtype=torch.long) for k in items[0]}     #If the maximum length is 0, return a dictionary containing tensors of zeros.
     return {
-        k: pad_sequence([d[k] for d in items if len(d["input_ids"])], batch_first=True)
+        k: pad_sequence([d[k] for d in items if len(d["input_ids"])], batch_first=True)     #Pads the sequences in the batch so that they are all the same length as the longest.
         for k, v in items[0].items()
     }
 
